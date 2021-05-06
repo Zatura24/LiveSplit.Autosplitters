@@ -104,22 +104,19 @@ split
     int x = current.x_pos;
     int y = current.y_pos;
 
-    if (timer.Run.CategoryName == "Any%")
+    // Loop through all the location to split on
+    foreach (var keyValue in vars.POSITION_SPLITS)
     {
-        // Loop through all the location to split on
-        foreach (var keyValue in vars.POSITION_SPLITS)
-        {
-            if (keyValue.Key == "start") { continue; }
+        if (keyValue.Key == "start") { continue; }
 
-            bool splitEnabled = settings[keyValue.Key];
-            bool visitedLocation = vars.visited_splits.Contains(keyValue.Key);
-            bool atLocation = vars.isAtLocation(keyValue.Key, x, y);
-            
-            if (splitEnabled && !visitedLocation && atLocation)
-            {
-                vars.visited_splits.Add(keyValue.Key);
-                return true;
-            }
+        bool splitEnabled = settings[keyValue.Key];
+        bool visitedLocation = vars.visited_splits.Contains(keyValue.Key);
+        bool atLocation = vars.isAtLocation(keyValue.Key, x, y);
+        
+        if (splitEnabled && !visitedLocation && atLocation)
+        {
+            vars.visited_splits.Add(keyValue.Key);
+            return true;
         }
     }
         
