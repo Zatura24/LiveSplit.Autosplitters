@@ -1,16 +1,16 @@
 state("Super Mario 64 FPS")
 {
-    // bool isAtMainMenu   : "mono-2.0-bdwgc.dll", 0x4A1CA5; // need to find a good pointer for thisw 
-    int fileLetter      : "UnityPlayer.dll",    0x017672D0, 0xE88, 0x390, 0x10, 0x38, 0x20, 0x24;
-    bool aFileStarted   : "UnityPlayer.dll",    0x017B0A90, 0x258, 0x610, 0x60, 0x0;
-    bool bFileStarted   : "UnityPlayer.dll",    0x017B0A90, 0x258, 0x610, 0x60, 0xB8;
-    bool cFileStarted   : "UnityPlayer.dll",    0x017B0A90, 0x258, 0x610, 0x60, 0x170;
-    bool dFileStarted   : "UnityPlayer.dll",    0x017B0A90, 0x258, 0x610, 0x60, 0x228;
-    int star_count      : "UnityPlayer.dll", 0x017AC308, 0xD0, 0x8, 0xC0, 0x84;
-}
+    int fileLetter      : "UnityPlayer.dll", 0x017672D0, 0xE88, 0x390, 0x10, 0x38, 0x20, 0x24;
+    bool aFileStarted   : "UnityPlayer.dll", 0x017B0A90, 0x258, 0x610, 0x60, 0x0;
+    bool bFileStarted   : "UnityPlayer.dll", 0x017B0A90, 0x258, 0x610, 0x60, 0xB8;
+    bool cFileStarted   : "UnityPlayer.dll", 0x017B0A90, 0x258, 0x610, 0x60, 0x170;
+    bool dFileStarted   : "UnityPlayer.dll", 0x017B0A90, 0x258, 0x610, 0x60, 0x228;
 
-update {
-    print("stars: " + current.star_count);
+    int starCount       : "UnityPlayer.dll", 0x017AC308, 0xD0, 0x8, 0xC0, 0x84;
+    int currentStageId  : "UnityPlayer.dll", 0x017AC308, 0xD0, 0x8, 0xC0, 0xD0;
+
+    bool lockControls   : "mono-2.0-bdwgc.dll", 0x00496DE8, 0x420, 0xCE8, 0x16C;
+    float lockControlsTimer : "mono-2.0-bdwgc.dll", 0x00496DE8, 0x420, 0xCE8, 0x170;
 }
 
 startup
@@ -34,20 +34,22 @@ start
 
 split
 {
+    // Split for every star collected. StarCount is updated then the game saves the data (about 0.75 seconds after fade-out)
     for (int i = 1; i < 100; i++) {
-        bool star_count_enabled = settings[""+i];
+        // Check if current StarCount has to be splitted on
+        bool starCount_enabled = settings[""+i];
 
-        if (star_count_enabled) {
-            if (current.star_count == i && old.star_count != current.star_count) {
+        if (starCount_enabled) {
+            if (current.starCount == i && old.starCount != current.starCount) {
                 return true;
             }
         }
     }
-}
 
-// reset
-// {
-//     if (current.isAtMainMenu && current.isAtMainMenu != old.isAtMainMenu) {
-//         return true;
-//     }
-// }
+    // Stage 35 is BiTS, controls get locked when touching a star, but also when touching an Amp. Amp's also have a custom LockTime where star's don't
+    if (current.currentStageId == 35) {
+        if (current.lockControls && current.lockControls != old.lockControls && current.lockControlsTimer <= 0 && current.lockControlsTimer == old.lockControlsTimer){
+            return true;
+        }
+    }
+}
