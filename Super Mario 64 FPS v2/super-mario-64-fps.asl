@@ -2,11 +2,14 @@ state("Super Mario 64 FPS") { }
 
 startup
 {
+    //=============================================================================
+	// Settings
+	//=============================================================================
     // Add the ability to split on Collecting the last power star
-    settings.Add("bowser", true, "After defeating bowser: ");
-    settings.Add("BiTS", true, "Collection the final Power Star in BiTS", "bowser");
+    settings.Add("bowser", true, "Defeating Bowser");
     settings.Add("BiTDW", false, "Collecting the first key in BiTDW", "bowser");
     settings.Add("BiTFS", false, "Collecting the second key in BiTFS", "bowser");
+    settings.Add("BiTS", true, "Collecting the final Power Star in BiTS", "bowser");
 
     vars.Weapons = new string[] {
         "Landmine",
@@ -29,6 +32,9 @@ startup
         settings.Add("stars"+i, false, "Collecting "+i+" stars", "stars");
     }
 
+    //=============================================================================
+	// Functions
+	//=============================================================================
     vars.OldKeyCount = 0;
     vars.CountKeys = (Func<bool[], int>) ((keys) => {
         int count = 0;
