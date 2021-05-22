@@ -3,15 +3,10 @@ state("Super Mario 64 FPS") { }
 startup
 {
     // Add the ability to split on Collecting the last power star
-    settings.Add("bits", true, "Bowser in The Sky");
-    settings.Add("cps", true, "Collection the final Power Star", "bits");
-
-    // Add the ability to split for every star
-    settings.Add("stars", false, "Collecting Stars");
-    for (int i = 1; i <= 104; ++i)
-    {
-        settings.Add("stars"+i, false, "Collecting "+i+" stars", "stars");
-    }
+    settings.Add("bowser", true, "After defeating bowser: ");
+    settings.Add("BiTS", true, "Collection the final Power Star in BiTS", "bowser");
+    settings.Add("BiTDW", false, "Collecting the first key in BiTDW", "bowser");
+    settings.Add("BiTFS", false, "Collecting the second key in BiTFS", "bowser");
 
     vars.Weapons = new string[] {
         "Landmine",
@@ -26,6 +21,22 @@ startup
     {
         settings.Add(weapon, false, "Get the " + weapon, "guns");
     }
+
+    // Add the ability to split for every star
+    settings.Add("stars", false, "Collecting Stars");
+    for (int i = 1; i <= 104; ++i)
+    {
+        settings.Add("stars"+i, false, "Collecting "+i+" stars", "stars");
+    }
+
+    vars.OldKeyCount = 0;
+    vars.CountKeys = (Func<bool[], int>) ((keys) => {
+        int count = 0;
+        for(int i = 0; i < keys.Length; ++i) {
+            count += keys[i] ? 1 : 0;
+        }
+        return count;
+    });
 }
 
 init
@@ -54,23 +65,27 @@ init
         new DeepPointer("UnityPlayer.dll", 0x017AC308, 0xD0, 0x8, 0xC0, 0x84)
     );
 
-    // Add LockControl watchers for BiTS
-    vars.LockControlsWatchers = new MemoryWatcherList();
-    vars.LockControlsWatchers.Add(
+    // Add Bowser watchers for BiTS, BiTDW and BiTFS
+    vars.LockControlWatchers = new MemoryWatcherList();
+    vars.LockControlWatchers.Add(
         new MemoryWatcher<bool>(
             new DeepPointer("mono-2.0-bdwgc.dll", 0x00496DE8, 0x420, 0xCE8, 0x16C)
         ) { Name = "lockControls" }
     );
-    vars.LockControlsWatchers.Add(
+    vars.LockControlWatchers.Add(
         new MemoryWatcher<float>(
             new DeepPointer("mono-2.0-bdwgc.dll", 0x00496DE8, 0x420, 0xCE8, 0x170)
         ) { Name = "lockControlsTimer" }
     );
-    vars.LockControlsWatchers.Add(
+    vars.LockControlWatchers.Add(
         new MemoryWatcher<int>(
             new DeepPointer("UnityPlayer.dll", 0x017AC308, 0xD0, 0x8, 0xC0, 0xD0)
         ) { Name = "currentStageId"}
     );
+    current.KeyArray = new bool[8];
+    IntPtr KeyArrayStart;
+    new DeepPointer("UnityPlayer.dll", 0x017B0A90, 0x258, 0x610, 0x60, 0x83).DerefOffsets(game, out KeyArrayStart);
+    vars.KeyArrayStart = KeyArrayStart;
 
     // Setup Inventory watchers
     vars.InventoryWatchers = new MemoryWatcherList();
@@ -92,9 +107,15 @@ update
     {
         vars.StarCountWatcher.Update(game);
     }
-    if (settings["cps"])
+    if (settings["BiTS"])
     {
-        vars.LockControlsWatchers.UpdateAll(game);
+        vars.LockControlWatchers.UpdateAll(game);
+    }
+    if (settings["BiTDW"] || settings["BiTFS"]) {
+        for (int i = 0; i < (current.KeyArray.Length/2); ++i) {
+            current.KeyArray[i*2] = game.ReadValue<bool>((IntPtr)vars.KeyArrayStart + 0xB8 * i);
+            current.KeyArray[i*2+1] = game.ReadValue<bool>((IntPtr)vars.KeyArrayStart + 0xB8 * i + 1);
+        }
     }
     if (settings["guns"])
     {
@@ -109,6 +130,7 @@ start
     vars.FileStartedWatchers.UpdateAll(game);
     
     // Checking if we need to start
+    vars.OldKeyCount = vars.CountKeys(current.KeyArray);
     return ((vars.FileStartedWatchers["fileLetter"].Current == 65 && !vars.FileStartedWatchers["file0"].Current) || 
             (vars.FileStartedWatchers["fileLetter"].Current == 66 && !vars.FileStartedWatchers["file1"].Current) || 
             (vars.FileStartedWatchers["fileLetter"].Current == 67 && !vars.FileStartedWatchers["file2"].Current) || 
@@ -133,18 +155,30 @@ split
     }
 
     // Stage 35 is BiTS, controls get locked when touching a star, but also when touching an Amp. Amp's also have a custom LockTime whereas star's do not
-    bool collectPowerStar_enabled = settings["cps"];
-    if (collectPowerStar_enabled && vars.LockControlsWatchers["currentStageId"].Current == 35)
+    bool collectPowerStar_enabled = settings["BiTS"]; // Stage 35
+    if (collectPowerStar_enabled && vars.LockControlWatchers["currentStageId"].Current == 35)
     {
-        if (vars.LockControlsWatchers["lockControls"].Current && 
-            vars.LockControlsWatchers["lockControls"].Changed && 
-            vars.LockControlsWatchers["lockControlsTimer"].Current <= 0 && 
-            !vars.LockControlsWatchers["lockControlsTimer"].Changed)
+        if (vars.LockControlWatchers["lockControls"].Current && 
+            vars.LockControlWatchers["lockControls"].Changed && 
+            vars.LockControlWatchers["lockControlsTimer"].Current <= 0 && 
+            !vars.LockControlWatchers["lockControlsTimer"].Changed)
         {
             return true;
         }
     }
 
+    // Split when the amount of keys has changed, meaning a key has been picked up
+    bool collectKeyOne_enabled = settings["BiTDW"];
+    bool collectKeyTwo_enabled = settings["BiTFS"];
+    if (collectKeyOne_enabled || collectKeyTwo_enabled) {
+        int KeyCount = vars.CountKeys(current.KeyArray);
+        if (KeyCount != vars.OldKeyCount) {
+            vars.OldKeyCount = KeyCount;
+            return true;
+        }
+    }
+
+    // Split when collecting a gun by checking every slot in the inventory
     bool collectGuns_enabled = settings["guns"];
     if (collectGuns_enabled) {
         // Loop over inventory and check if a new weapon is added
