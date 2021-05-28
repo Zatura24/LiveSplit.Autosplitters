@@ -42,7 +42,7 @@ startup
             count += keys[i] ? 1 : 0;
         }
         return count;
-    });
+    });3
 }
 
 init
@@ -89,9 +89,7 @@ init
         ) { Name = "currentStageId"}
     );
     current.KeyArray = new bool[8];
-    IntPtr KeyArrayStart;
-    new DeepPointer("UnityPlayer.dll", 0x017B0A90, 0x258, 0x610, 0x60, 0x83).DerefOffsets(game, out KeyArrayStart);
-    vars.KeyArrayStart = KeyArrayStart;
+    vars.KeyArrayStart = IntPtr.Zero;
 
     // Setup Inventory watchers
     vars.InventoryWatchers = new MemoryWatcherList();
@@ -134,6 +132,13 @@ start
     // Update FileStarted values and get fileLetter
     vars.FileStartedWatchers.ResetAll();
     vars.FileStartedWatchers.UpdateAll(game);
+
+    // Wait until the game is booted before setting key pointer
+    if (vars.KeyArrayStart == IntPtr.Zero) {
+        IntPtr KeyArrayStart;
+        new DeepPointer("UnityPlayer.dll", 0x017B0A90, 0x258, 0x610, 0x60, 0x83).DerefOffsets(game, out KeyArrayStart);
+        vars.KeyArrayStart = KeyArrayStart;
+    }
     
     // Checking if we need to start
     vars.OldKeyCount = vars.CountKeys(current.KeyArray);
