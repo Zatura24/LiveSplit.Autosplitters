@@ -42,7 +42,7 @@ startup
             count += keys[i] ? 1 : 0;
         }
         return count;
-    });3
+    });
 }
 
 init
