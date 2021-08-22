@@ -1,4 +1,10 @@
-state("Super Mario 64 FPS") { }
+state("Super Mario 64 FPS") { 
+    // Thanks to Raccoon Simp aka bruh_without_a_f
+    // Check if the game is loading pointers
+    int load : "UnityPlayer.dll", 0x017CC780, 0x20, 0x28, 0x0, 0xA70, 0x90;
+    int area : "UnityPlayer.dll", 0x01770200, 0x10, 0x0, 0x978;
+    
+}
 
 startup
 {
@@ -146,6 +152,20 @@ start
             (vars.FileStartedWatchers["fileLetter"].Current == 66 && !vars.FileStartedWatchers["file1"].Current) || 
             (vars.FileStartedWatchers["fileLetter"].Current == 67 && !vars.FileStartedWatchers["file2"].Current) || 
             (vars.FileStartedWatchers["fileLetter"].Current == 68 && !vars.FileStartedWatchers["file3"].Current));
+}
+
+// Thanks to Raccoon Simp aka bruh_without_a_f
+// Check if the game is loading
+isLoading {
+  if(current.load == 8) {
+    return false;
+  }
+  else if(current.area == 1) {
+    return false;
+  }
+  else {
+    return true;
+  }
 }
 
 split
