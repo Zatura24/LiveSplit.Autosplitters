@@ -3,7 +3,7 @@ state("Super Mario 64 FPS") {
     // Check if the game is loading pointers
     int load : "UnityPlayer.dll", 0x017CC780, 0x20, 0x28, 0x0, 0xA70, 0x90;
     int area : "UnityPlayer.dll", 0x01770200, 0x10, 0x0, 0x978;
-    
+    int star : "mono-2.0-bdwgc.dll", 0x4A1FC4;
 }
 
 startup
@@ -160,7 +160,7 @@ isLoading {
   if(current.load == 8) {
     return false;
   }
-  else if(current.area == 1) {
+  else if(current.area == 1 && current.star == 0) {
     return false;
   }
   else {
